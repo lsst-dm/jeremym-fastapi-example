@@ -90,7 +90,7 @@ async def get_schema(
         response = await http_client.get(schema_url)
     except httpx.RequestError as e:
         raise HTTPException(
-            status_code=200, detail=f"URL not found\n{schema_url}"
+            status_code=404, detail=f"URL not found\n{schema_url}"
         ) from e
     data: dict[str, Any] = yaml.safe_load(response.text)
     return Schema(**data)
