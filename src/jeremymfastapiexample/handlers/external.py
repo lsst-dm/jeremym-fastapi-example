@@ -1,8 +1,13 @@
 """Handlers for the app's external root, ``/jeremym-fastapi-example/``."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+import httpx
+import yaml
+from fastapi import APIRouter, Depends, HTTPException, Query
+from felis.datamodel import Schema
+from httpx import AsyncClient
+from safir.dependencies.http_client import http_client_dependency
 from safir.dependencies.logger import logger_dependency
 from safir.metadata import get_metadata
 from structlog.stdlib import BoundLogger
@@ -50,3 +55,42 @@ async def get_index(
         application_name=config.name,
     )
     return Index(metadata=metadata)
+
+
+@external_router.get("/hello", summary="Get a friendly greeting.")
+async def get_greeting() -> str:
+    return "Hello, SQuaRE Services Bootcamp!"
+
+
+async def fetch_data(schema_url: str) -> str:
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(schema_url)
+        except httpx.RequestError as e:
+            raise HTTPException(
+                status_code=200, detail=f"URL not found\n{schema_url}"
+            ) from e
+        return response.text
+
+
+@external_router.get(
+    "/schema",
+    summary="Get an SDM schema by name.",
+    response_model=Schema,
+)
+async def get_schema(
+    name: Annotated[str, Query()],
+    logger: Annotated[BoundLogger, Depends(logger_dependency)],
+    http_client: Annotated[AsyncClient, Depends(http_client_dependency)],
+) -> Schema:
+    """Get an SDM schema by name."""
+    schema_url = f"https://raw.githubusercontent.com/lsst/sdm_schemas/main/yml/{name}.yaml"
+    logger.info("Request for SDM schema", schema_url=schema_url)
+    try:
+        response = await http_client.get(schema_url)
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=200, detail=f"URL not found\n{schema_url}"
+        ) from e
+    data: dict[str, Any] = yaml.safe_load(response.text)
+    return Schema(**data)
