@@ -62,17 +62,6 @@ async def get_greeting() -> str:
     return "Hello, SQuaRE Services Bootcamp!"
 
 
-async def fetch_data(schema_url: str) -> str:
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(schema_url)
-        except httpx.RequestError as e:
-            raise HTTPException(
-                status_code=200, detail=f"URL not found\n{schema_url}"
-            ) from e
-        return response.text
-
-
 @external_router.get(
     "/schema",
     summary="Get an SDM schema by name.",
@@ -88,9 +77,20 @@ async def get_schema(
     logger.info("Request for SDM schema", schema_url=schema_url)
     try:
         response = await http_client.get(schema_url)
+        if response.status_code == 404:
+            raise HTTPException(
+                status_code=404, detail=f"URL not found: {schema_url}"
+            )
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=500,
+                detail="Github returned an error while fetching schema"
+                f" {name}",
+            )
     except httpx.RequestError as e:
         raise HTTPException(
-            status_code=404, detail=f"URL not found\n{schema_url}"
+            status_code=500,
+            detail=f"Unknown error occurred while fetching schema {name}",
         ) from e
     data: dict[str, Any] = yaml.safe_load(response.text)
     return Schema(**data)
