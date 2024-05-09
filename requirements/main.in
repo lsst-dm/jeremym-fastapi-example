@@ -16,6 +16,9 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 safir>=5
-httpx
+# httpx
+
+pyyaml
+types-PyYAML
 
 lsst-felis @ git+https://github.com/lsst/felis@main
