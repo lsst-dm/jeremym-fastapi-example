@@ -77,20 +77,15 @@ async def get_schema(
     logger.info("Request for SDM schema", schema_url=schema_url)
     try:
         response = await http_client.get(schema_url)
-        if response.status_code == 404:
-            raise HTTPException(
-                status_code=404, detail=f"URL not found: {schema_url}"
-            )
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=500,
-                detail="Github returned an error while fetching schema"
-                f" {name}",
-            )
+        response.raise_for_status()
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Unknown error occurred while fetching schema {name}",
+            detail=f"Unknown error occurred while fetching {schema_url}",
+        ) from e
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(
+            status_code=e.response.status_code, detail=f"{e!s}"
         ) from e
     data: dict[str, Any] = yaml.safe_load(response.text)
     return Schema(**data)
