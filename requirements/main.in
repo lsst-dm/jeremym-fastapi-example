@@ -21,4 +21,6 @@ safir>=5
 pyyaml
 types-PyYAML
 
-lsst-felis @ git+https://github.com/lsst/felis@main
+lsst-felis
+
+# lsst-felis @ git+https://github.com/lsst/felis@main
